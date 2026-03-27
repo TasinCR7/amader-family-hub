@@ -19,6 +19,9 @@ import {
   Heart,
   ChevronDown,
   TrendingUp,
+  Lock,
+  Megaphone,
+  Brain,
 } from "lucide-react";
 
 const navItems = [
@@ -32,6 +35,9 @@ const navItems = [
   { href: "/events", icon: Calendar, label: "ইভেন্ট ও ক্যালেন্ডার", labelEn: "Events" },
   { href: "/voting", icon: Vote, label: "ভোটিং", labelEn: "Voting" },
   { href: "/tracker", icon: TrendingUp, label: "সফলতা-ব্যর্থতা", labelEn: "Performance" },
+  { href: "/vault", icon: Lock, label: "সিকিউর ভল্ট", labelEn: "Vault" },
+  { href: "/notices", icon: Megaphone, label: "নোটিশ বোর্ড", labelEn: "Notices" },
+  { href: "/assistant", icon: Brain, label: "AI সহকারী", labelEn: "AI Assistant" },
 ];
 
 export default function Sidebar() {
