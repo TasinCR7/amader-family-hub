@@ -30,49 +30,20 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { useEffect } from "react";
 
-/* ───── mock data ───── */
-const expenseData = [12000, 18000, 15000, 22000, 19000, 25000, 21000, 28000, 24000, 31000, 27000, 35000];
-const memberData  = [8, 10, 12, 14, 16, 18, 22, 24, 25, 28, 30, 32];
-const successData = [65, 72, 68, 80, 78, 85, 82, 90, 88, 92, 91, 95];
-const landData    = [2, 3, 4, 5, 5, 6, 7, 8, 9, 10, 12, 15];
-
-const recentActivities = [
-  { id: 1, action: "নতুন সদস্য যোগ হয়েছে", user: "আব্দুল করিম", time: "২ ঘণ্টা আগে", type: "success" as const },
-  { id: 2, action: "খরচ রেকর্ড করা হয়েছে", user: "ফারুক আহমেদ", time: "৫ ঘণ্টা আগে", type: "info" as const },
-  { id: 3, action: "জমির দলিল আপলোড", user: "মোহাম্মদ আলী", time: "১ দিন আগে", type: "warning" as const },
-  { id: 4, action: "কাজ সম্পন্ন হয়েছে", user: "রহিমা বেগম", time: "২ দিন আগে", type: "success" as const },
-  { id: 5, action: "নতুন ইভেন্ট তৈরি", user: "জামাল উদ্দিন", time: "৩ দিন আগে", type: "info" as const },
-];
-
-const upcomingTasks = [
-  { id: 1, title: "জমি জরিপ সম্পন্ন করা", deadline: "২৮ মার্চ ২০২৬", status: "চলমান", progress: 65 },
-  { id: 2, title: "পারিবারিক সভা আয়োজন", deadline: "০১ এপ্রিল ২০২৬", status: "আসন্ন", progress: 30 },
-  { id: 3, title: "মাসিক হিসাব নিকাশ", deadline: "৩১ মার্চ ২০২৬", status: "চলমান", progress: 80 },
-];
-
-const aiInsights = [
-  { icon: TrendingUp, text: "এই মাসে সাফল্যের হার ৯৫% — পরিবারের সর্বোচ্চ!", color: "var(--success)" },
-  { icon: Wallet, text: "এই মাসে খরচ বেড়েছে ১২% — কারণ জমির কাজ চলছে।", color: "var(--gold)" },
-  { icon: Target, text: "৩টি কাজ এই সপ্তাহে শেষ হবে — দারুণ অগ্রগতি!", color: "var(--info)" },
-  { icon: Users, text: "৩ জন নতুন সদস্য গত মাসে যুক্ত হয়েছেন।", color: "var(--primary)" },
-];
-
-const topMembers = [
-  { name: "আব্দুল করিম", tasks: 12, score: 95 },
-  { name: "রহিমা বেগম", tasks: 10, score: 92 },
-  { name: "মোহাম্মদ আলী", tasks: 8, score: 88 },
-  { name: "ফারুক আহমেদ", tasks: 7, score: 85 },
-  { name: "জামাল উদ্দিন", tasks: 6, score: 78 },
-];
+/* ───── Dynamic Stats Logic ───── */
+// Note: Real data is fetched in the useEffect below.
+const emptyChartData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 export default function Home() {
   const [insightIndex] = useState(0);
   const [stats, setStats] = useState({
     membersCount: 0,
     totalExpenses: 0,
-    tasksCount: 7, // Hardcoded for now until tasks table added
+    tasksCount: 0,
     landCount: 0,
   });
+  const [activities, setActivities] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const supabase = createClient();
@@ -81,34 +52,57 @@ export default function Home() {
     async function fetchDashboardStats() {
       setLoading(true);
       
-      // Fetch member count
-      const { count: mCount } = await supabase
-        .from('members')
-        .select('*', { count: 'exact', head: true });
-      
-      // Fetch total expenses
-      const { data: expData } = await supabase
-        .from('expenses')
-        .select('amount');
-      const totalExp = expData?.reduce((acc, row) => acc + (Number(row.amount) || 0), 0) || 0;
+      try {
+        // Fetch member count
+        const { count: mCount } = await supabase
+          .from('members')
+          .select('*', { count: 'exact', head: true });
+        
+        // Fetch total expenses
+        const { data: expData } = await supabase
+          .from('expenses')
+          .select('amount');
+        const totalExp = expData?.reduce((acc, row) => acc + (Number(row.amount) || 0), 0) || 0;
 
-      // Fetch land record count
-      const { count: lCount } = await supabase
-        .from('land_records')
-        .select('*', { count: 'exact', head: true });
+        // Fetch land record count
+        const { count: lCount } = await supabase
+          .from('land_records')
+          .select('*', { count: 'exact', head: true });
 
-      // Fetch tasks count
-      const { count: tCount } = await supabase
-        .from('tasks')
-        .select('*', { count: 'exact', head: true });
+        // Fetch tasks count & data
+        const { count: tCount, data: tData } = await supabase
+          .from('tasks')
+          .select('*')
+          .limit(3);
+        
+        // Fetch recent activities (using notifications or specific audit log if exists)
+        const { data: nData } = await supabase
+          .from('notifications')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(5);
 
-      setStats({
-        membersCount: mCount || 0,
-        totalExpenses: totalExp,
-        tasksCount: tCount || 0,
-        landCount: lCount || 0,
-      });
-      setLoading(false);
+        setStats({
+          membersCount: mCount || 0,
+          totalExpenses: totalExp,
+          tasksCount: tCount || 0,
+          landCount: lCount || 0,
+        });
+
+        setTasks(tData || []);
+        setActivities(nData?.map(n => ({
+          id: n.id,
+          action: n.title,
+          user: n.author || "অ্যাডমিন",
+          time: new Date(n.created_at).toLocaleDateString('bn-BD'),
+          type: n.type === 'সফলতা' ? 'success' : (n.type === 'সতর্কতা' ? 'warning' : 'info')
+        })) || []);
+
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
     }
     fetchDashboardStats();
   }, []);
@@ -266,7 +260,7 @@ export default function Home() {
           </div>
 
           {/* ═══ AI Quick Insights ═══ */}
-          <div className="glass-card p-5 fade-in-up relative overflow-hidden" style={{ animationDelay: "350ms" }}>
+            <div className="glass-card p-5 fade-in-up relative overflow-hidden" style={{ animationDelay: "350ms" }}>
             <div className="absolute -top-16 -right-16 w-32 h-32 bg-primary/10 blur-[60px] rounded-full pointer-events-none" />
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 rounded-xl" style={{ background: "rgba(16, 185, 129, 0.1)" }}>
@@ -280,13 +274,11 @@ export default function Home() {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-              {aiInsights.map((insight, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 rounded-xl transition-all hover:scale-[1.02]"
-                  style={{ background: `${insight.color}08`, border: `1px solid ${insight.color}15` }}>
-                  <insight.icon size={16} style={{ color: insight.color, marginTop: 2, flexShrink: 0 }} />
-                  <p className="text-xs leading-relaxed">{insight.text}</p>
-                </div>
-              ))}
+              <div className="flex items-start gap-3 p-3 rounded-xl transition-all hover:scale-[1.02]"
+                style={{ background: `var(--primary)08`, border: `1px solid var(--primary)15` }}>
+                <TrendingUp size={16} style={{ color: "var(--primary)", marginTop: 2, flexShrink: 0 }} />
+                <p className="text-xs leading-relaxed">ডেটা বিশ্লেষণ করে আপনার এআই সহকারী এখানে গুরুত্বপূর্ণ ইনসাইট প্রদান করবে।</p>
+              </div>
             </div>
           </div>
 
@@ -301,10 +293,10 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Award size={16} style={{ color: "var(--gold)" }} />
-                  <span className="text-xs font-semibold" style={{ color: "var(--success)" }}>৯৫%</span>
+                  <span className="text-xs font-semibold" style={{ color: "var(--success)" }}>০%</span>
                 </div>
               </div>
-              <MiniChart data={successData} color="#10b981" height={160} />
+              <MiniChart data={emptyChartData} color="#10b981" height={160} />
               <div className="flex justify-between mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
                 {["এপ্রি", "মে", "জুন", "জুলা", "আগ", "সেপ্ট", "অক্টো", "নভে", "ডিসে", "জানু", "ফেব্রু", "মার্চ"].map((m) => (
                   <span key={m}>{m}</span>
@@ -321,10 +313,10 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2">
                   <TrendingUp size={16} style={{ color: "var(--gold)" }} />
-                  <span className="text-xs font-semibold" style={{ color: "var(--gold)" }}>+১৫%</span>
+                  <span className="text-xs font-semibold" style={{ color: "var(--gold)" }}>০%</span>
                 </div>
               </div>
-              <MiniChart data={expenseData} color="#f59e0b" height={160} />
+              <MiniChart data={emptyChartData} color="#f59e0b" height={160} />
               <div className="flex justify-between mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
                 {["এপ্রি", "মে", "জুন", "জুলা", "আগ", "সেপ্ট", "অক্টো", "নভে", "ডিসে", "জানু", "ফেব্রু", "মার্চ"].map((m) => (
                   <span key={m}>{m}</span>
@@ -341,10 +333,10 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin size={16} style={{ color: "#a855f7" }} />
-                  <span className="text-xs font-semibold" style={{ color: "#a855f7" }}>+৩</span>
+                  <span className="text-xs font-semibold" style={{ color: "#a855f7" }}>০</span>
                 </div>
               </div>
-              <MiniChart data={landData} color="#a855f7" height={160} />
+              <MiniChart data={emptyChartData} color="#a855f7" height={160} />
               <div className="flex justify-between mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
                 {["এপ্রি", "মে", "জুন", "জুলা", "আগ", "সেপ্ট", "অক্টো", "নভে", "ডিসে", "জানু", "ফেব্রু", "মার্চ"].map((m) => (
                   <span key={m}>{m}</span>
@@ -361,30 +353,8 @@ export default function Home() {
                 </div>
                 <BarChart3 size={16} style={{ color: "var(--info)" }} />
               </div>
-              <div className="space-y-3">
-                {topMembers.map((member, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <span className="text-xs font-bold w-5" style={{ color: i < 3 ? "var(--gold)" : "var(--text-muted)" }}>
-                      #{i + 1}
-                    </span>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                      style={{ background: i === 0 ? "linear-gradient(135deg, var(--gold), var(--primary))" : "var(--glass)", border: i !== 0 ? "1px solid var(--glass-border)" : "none", color: i !== 0 ? "var(--foreground)" : "white" }}>
-                      {member.name.substring(0, 2)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{member.name}</p>
-                      <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{member.tasks} কাজ সম্পন্ন</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
-                          <div className="h-full rounded-full" style={{ width: `${member.score}%`, background: "linear-gradient(90deg, var(--primary), var(--gold))" }} />
-                        </div>
-                        <span className="text-[10px] font-semibold" style={{ color: "var(--primary-light)" }}>{member.score}%</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+              <div className="space-y-3 py-4 text-center">
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>এখনও কোনো র‍্যাংকিং নেই। কার্যক্রম শুরু করলে এখানে দেখা যাবে।</p>
               </div>
             </div>
           </div>
@@ -398,7 +368,7 @@ export default function Home() {
                 <Clock size={16} style={{ color: "var(--text-muted)" }} />
               </div>
               <div className="space-y-3">
-                {recentActivities.map((activity) => (
+                {activities.length > 0 ? activities.map((activity) => (
                   <div key={activity.id} className="flex items-start gap-3 py-2">
                     <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
@@ -426,7 +396,9 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-xs text-center py-4" style={{ color: "var(--text-muted)" }}>নতুন কোনো কার্যক্রম নেই।</p>
+                )}
               </div>
             </div>
 
@@ -437,30 +409,24 @@ export default function Home() {
                 <button className="btn-primary text-xs py-1.5 px-3">সব দেখুন</button>
               </div>
               <div className="space-y-4">
-                {upcomingTasks.map((task) => (
+                {tasks.length > 0 ? tasks.map((task) => (
                   <div key={task.id} className="flex items-center gap-4 py-2">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{task.title}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <CalendarDays size={12} style={{ color: "var(--text-muted)" }} />
                         <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                          {task.deadline}
+                          {task.deadline || "কোনো তারিখ নেই"}
                         </span>
                         <span className={`badge text-[10px] ${task.status === "চলমান" ? "badge-warning" : "badge-info"}`}>
                           {task.status}
                         </span>
                       </div>
                     </div>
-                    <div className="w-24">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-semibold">{task.progress}%</span>
-                      </div>
-                      <div className="progress-bar">
-                        <div className="progress-fill" style={{ width: `${task.progress}%` }} />
-                      </div>
-                    </div>
                   </div>
-                ))}
+                )) : (
+                  <p className="text-xs text-center py-8" style={{ color: "var(--text-muted)" }}>কোনো চলমান কাজ নেই।</p>
+                )}
               </div>
             </div>
           </div>
@@ -474,10 +440,10 @@ export default function Home() {
               </div>
               <div className="flex items-center gap-2">
                 <Users size={16} style={{ color: "var(--primary)" }} />
-                <span className="text-xs font-semibold" style={{ color: "var(--primary-light)" }}>+৪</span>
+                <span className="text-xs font-semibold" style={{ color: "var(--primary-light)" }}>০</span>
               </div>
             </div>
-            <MiniChart data={memberData} color="#10b981" height={120} />
+            <MiniChart data={emptyChartData} color="#10b981" height={120} />
           </div>
 
           {/* Footer */}
