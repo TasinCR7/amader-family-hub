@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_Bengali, Hind_Siliguri } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -10,6 +10,21 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Premium Bengali Fonts
+const notoBengali = Noto_Sans_Bengali({
+  subsets: ["latin", "bengali"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-noto-bengali",
+  display: 'swap',
+});
+
+const hindSiliguri = Hind_Siliguri({
+  subsets: ["latin", "bengali"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-hind-siliguri",
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -26,14 +41,9 @@ export default function RootLayout({
   return (
     <html
       lang="bn"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${notoBengali.variable} ${hindSiliguri.variable} h-full antialiased`}
     >
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700;800&family=Hind+Siliguri:wght@300;400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+      <head />
       <body className="min-h-full flex">
         {/* Decorative particles */}
         <div className="bg-particle" style={{ width: 300, height: 300, top: '10%', left: '5%', background: 'var(--primary)' }} />

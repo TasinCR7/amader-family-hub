@@ -66,14 +66,9 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed md:sticky top-0 left-0 z-40 h-screen flex flex-col transition-all duration-300 ${
+        className={`sidebar-glass fixed md:sticky top-0 left-0 z-40 h-screen flex flex-col transition-all duration-300 ${
           collapsed ? "w-[72px]" : "w-[260px]"
         } ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
-        style={{
-          background: "var(--sidebar-bg)",
-          borderRight: "1px solid var(--card-border)",
-          backdropFilter: "blur(30px)",
-        }}
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-6 border-b" style={{ borderColor: "var(--card-border)" }}>

@@ -1,16 +1,79 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
-import { Megaphone, Pin, Plus, Clock, User, AlertTriangle, Eye } from "lucide-react";
+import { Megaphone, Pin, Plus, Clock, User, AlertTriangle, Eye, Loader2 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import Modal from "@/components/Modal";
 
-const notices = [
-  { id: 1, title: "পারিবারিক সভার তারিখ নির্ধারিত", content: "আগামী ০১ এপ্রিল ২০২৬, সন্ধ্যা ৭:০০টায় ঢাকা কার্যালয়ে বার্ষিক পারিবারিক সভা অনুষ্ঠিত হবে।", author: "আব্দুল করিম", date: "২৫ মার্চ ২০২৬", pinned: true, urgent: true, views: 28 },
-  { id: 2, title: "জমি করের শেষ তারিখ", content: "সকল জমির কর ৩১ মার্চের মধ্যে পরিশোধ করতে হবে। বিলম্বে জরিমানা আরোপিত হবে।", author: "জামাল উদ্দিন", date: "২০ মার্চ ২০২৬", pinned: true, urgent: false, views: 22 },
-  { id: 3, title: "শিক্ষা বৃত্তির জন্য আবেদন", content: "পরিবারের শিক্ষার্থীদের জন্য বৃত্তির আবেদন গ্রহণ চলছে। যোগ্য প্রার্থীরা যোগাযোগ করুন।", author: "রহিমা বেগম", date: "১৫ মার্চ ২০২৬", pinned: false, urgent: false, views: 15 },
-  { id: 4, title: "নতুন সদস্যের স্বাগতম", content: "আমাদের পরিবারে নতুন সদস্য যোগ হয়েছেন। সবাইকে উষ্ণ অভ্যর্থনা জানাই।", author: "ফারুক আহমেদ", date: "১০ মার্চ ২০২৬", pinned: false, urgent: false, views: 30 },
-];
+
+interface Notice {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+  author?: string;
+  pinned?: boolean;
+}
 
 export default function NoticesPage() {
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    message: "",
+    type: "সাধারণ",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchNotices();
+  }, []);
+
+  async function fetchNotices() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setNotices(data);
+    }
+    setLoading(false);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    const { error } = await supabase.from("notifications").insert([{
+      ...formData,
+      is_read: false,
+      author: "অ্যাডমিন",
+      pinned: false
+    }]);
+
+    if (error) {
+      alert("Error adding notice: " + error.message);
+    } else {
+      setIsModalOpen(false);
+      setFormData({
+        title: "",
+        message: "",
+        type: "সাধারণ",
+      });
+      fetchNotices();
+    }
+    setIsSubmitting(false);
+  };
+
+
   return (
     <div className="flex w-full min-h-screen">
       <Sidebar />
@@ -27,30 +90,111 @@ export default function NoticesPage() {
                 <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>গুরুত্বপূর্ণ ঘোষণা ও বিজ্ঞপ্তি</p>
               </div>
             </div>
-            <button className="btn-primary text-xs py-2"><Plus size={14} /> নতুন নোটিশ</button>
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="btn-primary text-xs py-2"
+            >
+              <Plus size={14} /> নতুন নোটিশ
+            </button>
+
           </div>
         </header>
         <div className="p-6 space-y-4">
-          {notices.map((notice, i) => (
-            <div key={notice.id} className={`glass-card p-5 fade-in-up ${notice.pinned ? "border-l-4" : ""}`}
-              style={{ animationDelay: `${i * 80}ms`, borderLeftColor: notice.pinned ? (notice.urgent ? "var(--danger)" : "var(--gold)") : "transparent" }}>
-              <div className="flex items-start gap-2 mb-2 flex-wrap">
-                {notice.pinned && <Pin size={12} style={{ color: "var(--gold)" }} />}
-                {notice.urgent && <AlertTriangle size={12} style={{ color: "var(--danger)" }} />}
-                <h3 className="font-semibold text-sm flex-1">{notice.title}</h3>
-              </div>
-              <p className="text-xs leading-relaxed mb-3" style={{ color: "var(--text-muted)" }}>{notice.content}</p>
-              <div className="flex items-center justify-between text-[10px]" style={{ color: "var(--text-muted)" }}>
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1"><User size={10} /> {notice.author}</span>
-                  <span className="flex items-center gap-1"><Clock size={10} /> {notice.date}</span>
-                </div>
-                <span className="flex items-center gap-1"><Eye size={10} /> {notice.views} জন দেখেছেন</span>
-              </div>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 size={40} className="animate-spin text-primary opacity-20" />
+              <p className="mt-4 text-xs text-muted-foreground">নোটিশগুলো লোড হচ্ছে...</p>
             </div>
-          ))}
+          ) : notices.length === 0 ? (
+            <div className="p-20 text-center">
+              <Megaphone size={48} className="mx-auto mb-4 opacity-10" />
+              <p className="text-sm text-muted-foreground">কোনো নতুন নোটিশ নেই</p>
+            </div>
+          ) : (
+            notices.map((notice, i) => (
+              <div key={notice.id} className={`glass-card p-5 fade-in-up ${notice.type === 'সতর্কতা' ? "border-l-4 border-l-red-500" : ""}`}
+                style={{ animationDelay: `${i * 80}ms` }}>
+                <div className="flex items-start gap-2 mb-2 flex-wrap">
+                  {notice.type === 'সতর্কতা' && <AlertTriangle size={12} style={{ color: "var(--danger)" }} />}
+                  <h3 className="font-semibold text-sm flex-1">{notice.title}</h3>
+                </div>
+                <p className="text-xs leading-relaxed mb-3" style={{ color: "var(--text-muted)" }}>{notice.message}</p>
+                <div className="flex items-center justify-between text-[10px]" style={{ color: "var(--text-muted)" }}>
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1"><User size={10} /> {notice.author || "অ্যাডমিন"}</span>
+                    <span className="flex items-center gap-1"><Clock size={10} /> {new Date(notice.created_at).toLocaleDateString('bn-BD')}</span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
+
+        {/* Add Notice Modal */}
+        <Modal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          title="নতুন নোটিশ দিন"
+        >
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">শিরোনাম</label>
+              <input
+                required
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50"
+                placeholder="যেমন: জরুরি সভা সংক্রান্ত"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">বিস্তারিত বার্তা</label>
+              <textarea
+                required
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50 h-32 resize-none"
+                placeholder="বিস্তারিত এখানে লিখুন..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">ধরণ</label>
+              <select
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50 appearance-none"
+              >
+                <option value="সাধারণ" className="bg-slate-900">সাধারণ</option>
+                <option value="জরুরি" className="bg-slate-900">জরুরি</option>
+                <option value="সতর্কতা" className="bg-slate-900">সতর্কতা</option>
+                <option value="উৎসব" className="bg-slate-900">উৎসব</option>
+              </select>
+            </div>
+
+            <div className="pt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 btn-secondary py-2.5"
+              >
+                বাতিল
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-[2] btn-primary py-2.5 flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                নোটিশ প্রকাশ করুন
+              </button>
+            </div>
+          </form>
+        </Modal>
       </main>
+
     </div>
   );
 }

@@ -10,7 +10,6 @@ import {
   ClipboardList,
   MapPin,
   TrendingUp,
-  TrendingDown,
   Bell,
   Search,
   CalendarDays,
@@ -26,7 +25,10 @@ import {
   Zap,
   Heart,
   BookOpen,
+  Loader2,
 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import { useEffect } from "react";
 
 /* ───── mock data ───── */
 const expenseData = [12000, 18000, 15000, 22000, 19000, 25000, 21000, 28000, 24000, 31000, 27000, 35000];
@@ -64,7 +66,52 @@ const topMembers = [
 ];
 
 export default function Home() {
-  const [insightIndex, setInsightIndex] = useState(0);
+  const [insightIndex] = useState(0);
+  const [stats, setStats] = useState({
+    membersCount: 0,
+    totalExpenses: 0,
+    tasksCount: 7, // Hardcoded for now until tasks table added
+    landCount: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchDashboardStats() {
+      setLoading(true);
+      
+      // Fetch member count
+      const { count: mCount } = await supabase
+        .from('members')
+        .select('*', { count: 'exact', head: true });
+      
+      // Fetch total expenses
+      const { data: expData } = await supabase
+        .from('expenses')
+        .select('amount');
+      const totalExp = expData?.reduce((acc, row) => acc + (Number(row.amount) || 0), 0) || 0;
+
+      // Fetch land record count
+      const { count: lCount } = await supabase
+        .from('land_records')
+        .select('*', { count: 'exact', head: true });
+
+      // Fetch tasks count
+      const { count: tCount } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true });
+
+      setStats({
+        membersCount: mCount || 0,
+        totalExpenses: totalExp,
+        tasksCount: tCount || 0,
+        landCount: lCount || 0,
+      });
+      setLoading(false);
+    }
+    fetchDashboardStats();
+  }, []);
 
   return (
     <div className="flex w-full min-h-screen">
@@ -169,24 +216,28 @@ export default function Home() {
                 <div className="p-2 rounded-lg" style={{ background: "rgba(16, 185, 129, 0.1)" }}>
                   <Users size={20} style={{ color: "var(--primary)" }} />
                 </div>
-                <span className="badge badge-success text-[10px]">
-                  <TrendingUp size={10} /> ১২%
-                </span>
+                {loading ? <Loader2 size={12} className="animate-spin text-muted-foreground mr-2" /> : (
+                  <span className="badge badge-success text-[10px]">
+                    <TrendingUp size={10} /> ১২%
+                  </span>
+                )}
               </div>
               <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>মোট সদস্য</p>
-              <p className="text-3xl font-extrabold"><AnimatedCounter end={32} /></p>
+              <p className="text-3xl font-extrabold">{loading ? "..." : <AnimatedCounter end={stats.membersCount} />}</p>
             </div>
             <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "100ms" }}>
               <div className="flex items-center justify-between mb-3">
                 <div className="p-2 rounded-lg" style={{ background: "rgba(245, 158, 11, 0.1)" }}>
                   <Wallet size={20} style={{ color: "var(--gold)" }} />
                 </div>
-                <span className="badge badge-warning text-[10px]">
-                  <TrendingUp size={10} /> ৮%
-                </span>
+                {loading ? <Loader2 size={12} className="animate-spin text-muted-foreground mr-2" /> : (
+                  <span className="badge badge-warning text-[10px]">
+                    <TrendingUp size={10} /> ৮%
+                  </span>
+                )}
               </div>
               <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>মোট খরচ</p>
-              <p className="text-3xl font-extrabold"><AnimatedCounter end={285000} prefix="৳" /></p>
+              <p className="text-3xl font-extrabold">{loading ? "..." : <AnimatedCounter end={stats.totalExpenses} prefix="৳" />}</p>
             </div>
             <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "200ms" }}>
               <div className="flex items-center justify-between mb-3">
@@ -196,19 +247,21 @@ export default function Home() {
                 <span className="badge badge-info text-[10px]">৩ নতুন</span>
               </div>
               <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>চলমান কাজ</p>
-              <p className="text-3xl font-extrabold"><AnimatedCounter end={7} /></p>
+              <p className="text-3xl font-extrabold"><AnimatedCounter end={stats.tasksCount} /></p>
             </div>
             <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "300ms" }}>
               <div className="flex items-center justify-between mb-3">
                 <div className="p-2 rounded-lg" style={{ background: "rgba(168, 85, 247, 0.1)" }}>
                   <MapPin size={20} style={{ color: "#a855f7" }} />
                 </div>
-                <span className="badge badge-success text-[10px]">
-                  <TrendingUp size={10} /> ১০০%
-                </span>
+                {loading ? <Loader2 size={12} className="animate-spin text-muted-foreground mr-2" /> : (
+                  <span className="badge badge-success text-[10px]">
+                    <TrendingUp size={10} /> ১০০%
+                  </span>
+                )}
               </div>
               <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>জমি রেকর্ড</p>
-              <p className="text-3xl font-extrabold"><AnimatedCounter end={15} /></p>
+              <p className="text-3xl font-extrabold">{loading ? "..." : <AnimatedCounter end={stats.landCount} />}</p>
             </div>
           </div>
 

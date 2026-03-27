@@ -1,32 +1,108 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
-import { Vote, Plus, CheckCircle2, Clock, Users, BarChart3, ChevronRight } from "lucide-react";
+import { Vote, Plus, CheckCircle2, Clock, Users, Loader2 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import Modal from "@/components/Modal";
+
 
 interface Poll {
-  id: number; question: string; options: { text: string; votes: number }[];
-  totalVoters: number; status: "চলমান" | "সম্পন্ন"; deadline: string;
-  creator: string;
+  id: number;
+  question: string;
+  status: string;
+  deadline: string;
+  poll_options: { text: string; votes: number }[];
+  members?: { name: string };
+  totalVoters?: number;
 }
 
-const polls: Poll[] = [
-  {
-    id: 1, question: "পারিবারিক পিকনিক কোথায় হবে?", totalVoters: 28, status: "চলমান", deadline: "৩০ মার্চ ২০২৬", creator: "আব্দুল করিম",
-    options: [{ text: "কক্সবাজার", votes: 12 }, { text: "সিলেট", votes: 8 }, { text: "বান্দরবান", votes: 5 }, { text: "সুন্দরবন", votes: 3 }],
-  },
-  {
-    id: 2, question: "নতুন পারিবারিক কোষাধ্যক্ষ কে হবেন?", totalVoters: 22, status: "সম্পন্ন", deadline: "২০ মার্চ ২০২৬", creator: "ফারুক আহমেদ",
-    options: [{ text: "জামাল উদ্দিন", votes: 14 }, { text: "মোহাম্মদ আলী", votes: 8 }],
-  },
-  {
-    id: 3, question: "মরহুমের ইসালে সওয়াবের তারিখ", totalVoters: 30, status: "চলমান", deadline: "১০ এপ্রিল ২০২৬", creator: "রহিমা বেগম",
-    options: [{ text: "১৫ এপ্রিল", votes: 15 }, { text: "২০ এপ্রিল", votes: 10 }, { text: "২৫ এপ্রিল", votes: 5 }],
-  },
-];
-
 export default function VotingPage() {
-  const [selectedPoll, setSelectedPoll] = useState<number | null>(null);
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    question: "",
+    deadline: "",
+    options: ["", ""],
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchPolls();
+  }, []);
+
+  async function fetchPolls() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('polls')
+      .select('*, poll_options(*), members(name)');
+    
+    if (!error && data) {
+      setPolls(data.map(p => ({
+        ...p,
+        totalVoters: p.poll_options.reduce((sum: number, o: any) => sum + o.votes, 0)
+      })));
+    }
+    setLoading(false);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    const { data: pollData, error: pollError } = await supabase
+      .from("polls")
+      .insert([{
+        question: formData.question,
+        deadline: new Date(formData.deadline).toLocaleDateString('bn-BD'),
+        status: "চলমান",
+      }])
+      .select()
+      .single();
+
+    if (pollError) {
+      alert("Error creating poll: " + pollError.message);
+    } else if (pollData) {
+      const optionsToInsert = formData.options
+        .filter(opt => opt.trim() !== "")
+        .map(opt => ({
+          poll_id: pollData.id,
+          text: opt,
+          votes: 0
+        }));
+
+      const { error: optionsError } = await supabase
+        .from("poll_options")
+        .insert(optionsToInsert);
+
+      if (optionsError) {
+        alert("Error adding options: " + optionsError.message);
+      } else {
+        setIsModalOpen(false);
+        setFormData({
+          question: "",
+          deadline: "",
+          options: ["", ""],
+        });
+        fetchPolls();
+      }
+    }
+    setIsSubmitting(false);
+  };
+
+  const addOption = () => {
+    setFormData({ ...formData, options: [...formData.options, ""] });
+  };
+
+  const updateOption = (index: number, value: string) => {
+    const newOptions = [...formData.options];
+    newOptions[index] = value;
+    setFormData({ ...formData, options: newOptions });
+  };
+
 
   return (
     <div className="flex w-full min-h-screen">
@@ -44,79 +120,152 @@ export default function VotingPage() {
                 <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>গণতান্ত্রিক সিদ্ধান্ত গ্রহণ</p>
               </div>
             </div>
-            <button className="btn-primary text-xs py-2"><Plus size={14} /> নতুন পোল</button>
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="btn-primary text-xs py-2"
+            >
+              <Plus size={14} /> নতুন পোল
+            </button>
+
           </div>
         </header>
 
         <div className="p-6 space-y-6">
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="glass-card p-4 text-center fade-in-up">
-              <p className="text-2xl font-extrabold gradient-text">{polls.length}</p>
-              <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>মোট পোল</p>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 size={40} className="animate-spin text-primary opacity-20" />
+              <p className="mt-4 text-xs text-muted-foreground">পোলগুলো লোড হচ্ছে...</p>
             </div>
-            <div className="glass-card p-4 text-center fade-in-up" style={{ animationDelay: "100ms" }}>
-              <p className="text-2xl font-extrabold" style={{ color: "var(--gold)" }}>{polls.filter(p => p.status === "চলমান").length}</p>
-              <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>চলমান</p>
+          ) : polls.length === 0 ? (
+            <div className="p-20 text-center glass-card">
+              <Vote size={48} className="mx-auto mb-4 opacity-10" />
+              <p className="text-sm text-muted-foreground">কোনো পোল পাওয়া যায়নি</p>
             </div>
-            <div className="glass-card p-4 text-center fade-in-up" style={{ animationDelay: "200ms" }}>
-              <p className="text-2xl font-extrabold" style={{ color: "var(--success)" }}>{polls.filter(p => p.status === "সম্পন্ন").length}</p>
-              <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>সম্পন্ন</p>
-            </div>
-          </div>
-
-          {/* Polls */}
-          <div className="space-y-4">
-            {polls.map((poll, idx) => {
-              const maxVotes = Math.max(...poll.options.map(o => o.votes));
-              const totalVotes = poll.options.reduce((s, o) => s + o.votes, 0);
-              return (
-                <div key={poll.id} className="glass-card p-6 fade-in-up" style={{ animationDelay: `${(idx + 3) * 80}ms` }}>
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-sm">{poll.question}</h3>
-                        <span className={`badge text-[10px] ${poll.status === "চলমান" ? "badge-warning" : "badge-success"}`}>
-                          {poll.status === "চলমান" ? <Clock size={10} /> : <CheckCircle2 size={10} />}
-                          {poll.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
-                        <span>তৈরি করেছেন: {poll.creator}</span>
-                        <span className="flex items-center gap-1"><Users size={10} /> {poll.totalVoters} ভোটার</span>
-                        <span>সময়সীমা: {poll.deadline}</span>
+          ) : (
+            <div className="space-y-4">
+              {polls.map((poll, idx) => {
+                const maxVotes = Math.max(...poll.poll_options.map(o => o.votes));
+                const totalVotes = poll.totalVoters || 0;
+                return (
+                  <div key={poll.id} className="glass-card p-6 fade-in-up" style={{ animationDelay: `${idx * 80}ms` }}>
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-sm">{poll.question}</h3>
+                          <span className={`badge text-[10px] ${poll.status === "চলমান" ? "badge-warning" : "badge-success"}`}>
+                            {poll.status === "চলমান" ? <Clock size={10} /> : <CheckCircle2 size={10} />}
+                            {poll.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                          <span>তৈরি করেছেন: {poll.members?.name || "অ্যাডমিন"}</span>
+                          <span className="flex items-center gap-1"><Users size={10} /> {totalVotes} ভোটার</span>
+                          <span>সময়সীমা: {poll.deadline}</span>
+                        </div>
                       </div>
                     </div>
-                    {poll.status === "চলমান" && (
-                      <button className="btn-primary text-[10px] py-1.5 px-3">ভোট দিন</button>
-                    )}
-                  </div>
 
-                  <div className="space-y-2.5">
-                    {poll.options.map((opt, i) => {
-                      const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
-                      const isWinning = opt.votes === maxVotes;
-                      return (
-                        <div key={i} className="relative p-3 rounded-xl overflow-hidden" style={{ background: "var(--glass)", border: `1px solid ${isWinning ? "rgba(16, 185, 129, 0.3)" : "var(--glass-border)"}` }}>
-                          <div className="absolute inset-0 rounded-xl transition-all duration-500"
-                            style={{ background: isWinning ? "rgba(16, 185, 129, 0.08)" : "rgba(255,255,255,0.02)", width: `${pct}%` }} />
-                          <div className="relative flex items-center justify-between">
-                            <span className="text-xs font-medium">{opt.text}</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{opt.votes} ভোট</span>
-                              <span className="text-xs font-bold" style={{ color: isWinning ? "var(--primary)" : "var(--text-muted)" }}>{pct}%</span>
+                    <div className="space-y-2.5">
+                      {poll.poll_options.map((opt, i) => {
+                        const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+                        const isWinning = opt.votes === maxVotes && opt.votes > 0;
+                        return (
+                          <div key={i} className="relative p-3 rounded-xl overflow-hidden" style={{ background: "var(--glass)", border: `1px solid ${isWinning ? "rgba(16, 185, 129, 0.3)" : "var(--glass-border)"}` }}>
+                            <div className="absolute inset-0 rounded-xl transition-all duration-500"
+                              style={{ background: isWinning ? "rgba(16, 185, 129, 0.08)" : "rgba(255,255,255,0.02)", width: `${pct}%` }} />
+                            <div className="relative flex items-center justify-between">
+                              <span className="text-xs font-medium">{opt.text}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{opt.votes} ভোট</span>
+                                <span className="text-xs font-bold" style={{ color: isWinning ? "var(--primary)" : "var(--text-muted)" }}>{pct}%</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
+
+        {/* Add Poll Modal */}
+        <Modal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          title="নতুন পোল তৈরি করুন"
+        >
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">ভোটের প্রশ্ন</label>
+              <input
+                required
+                type="text"
+                value={formData.question}
+                onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50"
+                placeholder="যেমন: এবারের ঈদ পুনর্মিলনী কোথায় হবে?"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">বিকল্পসমূহ (Options)</label>
+              <div className="space-y-2">
+                {formData.options.map((opt, i) => (
+                  <input
+                    key={i}
+                    required={i < 2}
+                    type="text"
+                    value={opt}
+                    onChange={(e) => updateOption(i, e.target.value)}
+                    className="w-full bg-glass border border-glass-border rounded-xl px-4 py-1.5 text-xs outline-none focus:border-primary/50"
+                    placeholder={`বিকল্প ${i + 1}`}
+                  />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addOption}
+                className="text-[10px] text-primary hover:underline flex items-center gap-1"
+              >
+                <Plus size={10} /> আরও বিকল্প যোগ করুন
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">সময়সীমা</label>
+              <input
+                required
+                type="date"
+                value={formData.deadline}
+                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50"
+              />
+            </div>
+
+            <div className="pt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 btn-secondary py-2.5"
+              >
+                বাতিল
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-[2] btn-primary py-2.5 flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+                পোল প্রকাশ করুন
+              </button>
+            </div>
+          </form>
+        </Modal>
       </main>
+
     </div>
   );
 }

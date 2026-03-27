@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import {
   Users,
@@ -16,33 +16,104 @@ import {
   Star,
   ChevronDown,
   X,
+  Loader2,
 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import Modal from "@/components/Modal";
 
-const allMembers = [
-  { id: 1, name: "আব্দুল করিম", nameEn: "Abdul Karim", role: "পারিবারিক প্রধান", relation: "জ্যেষ্ঠ পুত্র", generation: "২য় প্রজন্ম", phone: "০১৭XXXXXXXX", email: "karim@family.com", location: "ঢাকা", status: "active", avatar: "AK", tasks: 12, score: 95 },
-  { id: 2, name: "ফারুক আহমেদ", nameEn: "Faruk Ahmed", role: "সদস্য", relation: "কনিষ্ঠ পুত্র", generation: "২য় প্রজন্ম", phone: "০১৮XXXXXXXX", email: "faruk@family.com", location: "চট্টগ্রাম", status: "active", avatar: "FA", tasks: 7, score: 85 },
-  { id: 3, name: "মোহাম্মদ আলী", nameEn: "Mohammad Ali", role: "সদস্য", relation: "নাতি", generation: "৩য় প্রজন্ম", phone: "০১৯XXXXXXXX", email: "ali@family.com", location: "সিলেট", status: "active", avatar: "MA", tasks: 8, score: 88 },
-  { id: 4, name: "রহিমা বেগম", nameEn: "Rahima Begum", role: "সদস্য", relation: "বধূ", generation: "২য় প্রজন্ম", phone: "০১৬XXXXXXXX", email: "rahima@family.com", location: "রাজশাহী", status: "inactive", avatar: "RB", tasks: 10, score: 92 },
-  { id: 5, name: "জামাল উদ্দিন", nameEn: "Jamal Uddin", role: "কোষাধ্যক্ষ", relation: "ভাতিজা", generation: "৩য় প্রজন্ম", phone: "০১৫XXXXXXXX", email: "jamal@family.com", location: "খুলনা", status: "active", avatar: "JU", tasks: 6, score: 78 },
-  { id: 6, name: "সালমা খাতুন", nameEn: "Salma Khatun", role: "সদস্য", relation: "নাতনী", generation: "৩য় প্রজন্ম", phone: "০১৩XXXXXXXX", email: "salma@family.com", location: "বরিশাল", status: "active", avatar: "SK", tasks: 5, score: 72 },
-  { id: 7, name: "করিম উদ্দিন", nameEn: "Korim Uddin", role: "উপদেষ্টা", relation: "চাচা", generation: "১ম প্রজন্ম", phone: "০১১XXXXXXXX", email: "korim@family.com", location: "ময়মনসিংহ", status: "active", avatar: "KU", tasks: 3, score: 68 },
-  { id: 8, name: "নূরজাহান বেগম", nameEn: "Nurjahan Begum", role: "সদস্য", relation: "চাচী", generation: "১ম প্রজন্ম", phone: "০১২XXXXXXXX", email: "nur@family.com", location: "ময়মনসিংহ", status: "active", avatar: "NB", tasks: 4, score: 74 },
-];
+
+interface Member {
+  id: number;
+  name: string;
+  name_en?: string;
+  role?: string;
+  relation?: string;
+  generation?: string;
+  phone?: string;
+  email?: string;
+  location?: string;
+  status: string;
+  avatar?: string;
+  tasks?: number;
+  score?: number;
+}
 
 const generations = ["সব", "১ম প্রজন্ম", "২য় প্রজন্ম", "৩য় প্রজন্ম"];
 
 export default function MembersPage() {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedGen, setSelectedGen] = useState("সব");
   const [showFilter, setShowFilter] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    name_en: "",
+    role: "",
+    relation: "",
+    generation: "২য় প্রজন্ম",
+    phone: "",
+    email: "",
+    location: "",
+    status: "active",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const filtered = allMembers.filter((m) => {
-    const matchSearch = m.name.includes(search) || m.nameEn.toLowerCase().includes(search.toLowerCase()) || m.location.includes(search);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchMembers();
+  }, []);
+
+  async function fetchMembers() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('members')
+      .select('*');
+    
+    if (error) {
+      console.error("Error fetching members:", error);
+    } else if (data) {
+      const sorted = [...data].sort((a, b) => (b.score || 0) - (a.score || 0));
+      setMembers(sorted);
+    }
+    setLoading(false);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const { error } = await supabase.from("members").insert([formData]);
+    if (error) {
+      alert("Error adding member: " + error.message);
+    } else {
+      setIsModalOpen(false);
+      setFormData({
+        name: "",
+        name_en: "",
+        role: "",
+        relation: "",
+        generation: "২য় প্রজন্ম",
+        phone: "",
+        email: "",
+        location: "",
+        status: "active",
+      });
+      fetchMembers();
+    }
+    setIsSubmitting(false);
+  };
+
+
+  const filtered = members.filter((m) => {
+    const matchSearch = m.name?.includes(search) || m.name_en?.toLowerCase().includes(search.toLowerCase()) || m.location?.includes(search);
     const matchGen = selectedGen === "সব" || m.generation === selectedGen;
     return matchSearch && matchGen;
   });
 
-  const activeCount = allMembers.filter((m) => m.status === "active").length;
+  const activeCount = members.filter((m) => m.status === "active").length;
 
   return (
     <div className="flex w-full min-h-screen">
@@ -65,7 +136,7 @@ export default function MembersPage() {
               <div>
                 <h1 className="text-xl font-bold gradient-text">সদস্য তালিকা</h1>
                 <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
-                  মোট {allMembers.length} জন • সক্রিয় {activeCount} জন
+                  মোট {members.length} জন • সক্রিয় {activeCount} জন
                 </p>
               </div>
             </div>
@@ -92,9 +163,13 @@ export default function MembersPage() {
               >
                 <Filter size={14} />
               </button>
-              <button className="btn-primary text-xs py-2">
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="btn-primary text-xs py-2"
+              >
                 <UserPlus size={14} /> যোগ করুন
               </button>
+
             </div>
           </div>
 
@@ -127,7 +202,7 @@ export default function MembersPage() {
           {/* Summary Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             <div className="glass-card p-4 text-center fade-in-up">
-              <p className="text-2xl font-extrabold gradient-text">{allMembers.length}</p>
+              <p className="text-2xl font-extrabold gradient-text">{members.length}</p>
               <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>মোট সদস্য</p>
             </div>
             <div className="glass-card p-4 text-center fade-in-up" style={{ animationDelay: "100ms" }}>
@@ -145,7 +220,12 @@ export default function MembersPage() {
           </div>
 
           {/* Members Grid */}
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 size={40} className="animate-spin text-primary opacity-20" />
+              <p className="mt-4 text-xs text-muted-foreground">সদস্য তথ্য লোড হচ্ছে...</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="glass-card p-12 text-center">
               <Users size={48} className="mx-auto mb-4 opacity-10" />
               <h3 className="text-lg font-semibold mb-1" style={{ color: "var(--text-muted)" }}>কোনো সদস্য পাওয়া যায়নি</h3>
@@ -165,7 +245,7 @@ export default function MembersPage() {
                         className="w-14 h-14 rounded-2xl flex items-center justify-center text-sm font-bold text-white flex-shrink-0 shadow-lg transition-transform group-hover:scale-110"
                         style={{ background: "linear-gradient(135deg, var(--primary), var(--gold))" }}
                       >
-                        {member.avatar}
+                        {member.avatar || member.name.substring(0, 2)}
                       </div>
                       <div
                         className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2"
@@ -178,7 +258,7 @@ export default function MembersPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-sm">{member.name}</h3>
-                        {member.score >= 90 && <Star size={12} style={{ color: "var(--gold)" }} />}
+                        {(member.score || 0) >= 90 && <Star size={12} style={{ color: "var(--gold)" }} />}
                       </div>
                       <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
                         {member.role} • {member.relation}
@@ -210,17 +290,17 @@ export default function MembersPage() {
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1.5">
                         <CheckCircle2 size={12} style={{ color: "var(--success)" }} />
-                        <span className="text-[10px] font-medium">{member.tasks} কাজ</span>
+                        <span className="text-[10px] font-medium">{member.tasks || 0} কাজ</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Award size={12} style={{ color: "var(--gold)" }} />
-                        <span className="text-[10px] font-medium">{member.score}%</span>
+                        <span className="text-[10px] font-medium">{member.score || 0}%</span>
                       </div>
                     </div>
                     <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
                       <div
                         className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${member.score}%`, background: "linear-gradient(90deg, var(--primary), var(--gold))" }}
+                        style={{ width: `${member.score || 0}%`, background: "linear-gradient(90deg, var(--primary), var(--gold))" }}
                       />
                     </div>
                   </div>
@@ -229,7 +309,141 @@ export default function MembersPage() {
             </div>
           )}
         </div>
+
+        {/* Add Member Modal */}
+        <Modal 
+          isOpen={isModalOpen} 
+          onClose={() => setIsModalOpen(false)} 
+          title="নতুন সদস্য যোগ করুন"
+        >
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">নাম (বাংলা)</label>
+                <input
+                  required
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50"
+                  placeholder="যেমন: আব্দুল করিম"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">নাম (ইংরেজি)</label>
+                <input
+                  type="text"
+                  value={formData.name_en}
+                  onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
+                  className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50"
+                  placeholder="যেমন: Abdul Karim"
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">পদবী/সেরল</label>
+                <input
+                  type="text"
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50"
+                  placeholder="যেমন: ছাত্র, প্রকৌশলী"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">সম্পর্ক</label>
+                <input
+                  type="text"
+                  value={formData.relation}
+                  onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
+                  className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50"
+                  placeholder="যেমন: পুত্র, নাতি"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">প্রজন্ম</label>
+                <select
+                  value={formData.generation}
+                  onChange={(e) => setFormData({ ...formData, generation: e.target.value })}
+                  className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50 appearance-none"
+                >
+                  {generations.slice(1).map(g => (
+                    <option key={g} value={g} className="bg-slate-900">{g}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">অবস্থান</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50 appearance-none"
+                >
+                  <option value="active" className="bg-slate-900">সক্রিয়</option>
+                  <option value="inactive" className="bg-slate-900">নিষ্ক্রিয়</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">ফোন নম্বর</label>
+              <input
+                type="text"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50"
+                placeholder="০১XXXXXXXXX"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">ইমেইল</label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50"
+                placeholder="example@mail.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-muted-foreground">এলাকা/ঠিকানা</label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                className="w-full bg-glass border border-glass-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50"
+                placeholder="যেমন: ঢাকা, বগুড়া"
+              />
+            </div>
+
+            <div className="pt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="flex-1 btn-secondary py-2.5"
+              >
+                বাতিল
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex-[2] btn-primary py-2.5 flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                সংরক্ষণ করুন
+              </button>
+            </div>
+          </form>
+        </Modal>
       </main>
+
     </div>
   );
 }

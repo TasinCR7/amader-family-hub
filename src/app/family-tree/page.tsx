@@ -1,49 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
-import { GitBranch, ChevronRight, ChevronDown, Heart, Star, MapPin, Calendar } from "lucide-react";
+import { GitBranch, ChevronRight, ChevronDown, Heart, MapPin, Calendar, Loader2 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
 
 interface FamilyMember {
-  id: number; name: string; nameEn: string; relation: string;
-  birth?: string; death?: string; location?: string; story?: string;
-  children?: FamilyMember[]; isDeceased?: boolean;
+  id: number;
+  name: string;
+  name_en?: string;
+  relation?: string;
+  birth_year?: string;
+  death_year?: string;
+  location?: string;
+  story?: string;
+  is_deceased?: boolean;
+  parent_id?: number | null;
+  children?: FamilyMember[];
 }
-
-const familyTree: FamilyMember = {
-  id: 0, name: "মরহুম আব্দুল গফুর", nameEn: "Abdul Gafur", relation: "প্রতিষ্ঠাতা",
-  birth: "১৯৩০", death: "২০১৫", location: "গোপালগঞ্জ", isDeceased: true,
-  story: "পরিবারের প্রতিষ্ঠাতা। তিনি কৃষি ও শিক্ষায় গুরুত্বপূর্ণ অবদান রেখেছেন।",
-  children: [
-    {
-      id: 1, name: "আব্দুল করিম", nameEn: "Abdul Karim", relation: "জ্যেষ্ঠ পুত্র",
-      birth: "১৯৫৫", location: "ঢাকা",
-      story: "পরিবারের বর্তমান প্রধান। সকল পারিবারিক সিদ্ধান্তে নেতৃত্ব দেন।",
-      children: [
-        { id: 10, name: "মোহাম্মদ আলী", nameEn: "Mohammad Ali", relation: "নাতি", birth: "১৯৮৫", location: "সিলেট" },
-        { id: 11, name: "সালমা খাতুন", nameEn: "Salma Khatun", relation: "নাতনী", birth: "১৯৮৮", location: "বরিশাল" },
-      ],
-    },
-    {
-      id: 2, name: "ফারুক আহমেদ", nameEn: "Faruk Ahmed", relation: "কনিষ্ঠ পুত্র",
-      birth: "১৯৬০", location: "চট্টগ্রাম",
-      children: [
-        { id: 20, name: "জামাল উদ্দিন", nameEn: "Jamal Uddin", relation: "ভাতিজা", birth: "১৯৯০", location: "খুলনা" },
-      ],
-    },
-    {
-      id: 3, name: "রহিমা বেগম", nameEn: "Rahima Begum", relation: "কন্যা",
-      birth: "১৯৫৮", location: "রাজশাহী",
-    },
-    {
-      id: 4, name: "করিম উদ্দিন", nameEn: "Korim Uddin", relation: "ভাই",
-      birth: "১৯৩৫", location: "ময়মনসিংহ",
-      children: [
-        { id: 40, name: "নূরজাহান বেগম", nameEn: "Nurjahan Begum", relation: "ভাতিজি", birth: "১৯৭০", location: "ময়মনসিংহ" },
-      ],
-    },
-  ],
-};
 
 function TreeNode({ member, depth = 0 }: { member: FamilyMember; depth?: number }) {
   const [expanded, setExpanded] = useState(depth < 2);
@@ -53,46 +27,40 @@ function TreeNode({ member, depth = 0 }: { member: FamilyMember; depth?: number 
     <div className="fade-in-up" style={{ animationDelay: `${depth * 100}ms` }}>
       <div
         className={`glass-card p-4 mb-3 flex items-center gap-4 cursor-pointer group transition-all ${
-          member.isDeceased ? "border-l-4" : ""
+          member.is_deceased ? "border-l-4" : ""
         }`}
         style={{
           marginLeft: depth > 0 ? `${depth * 24}px` : 0,
-          borderLeftColor: member.isDeceased ? "var(--gold)" : "transparent",
+          borderLeftColor: member.is_deceased ? "var(--gold)" : "transparent",
         }}
         onClick={() => hasChildren && setExpanded(!expanded)}
       >
-        {/* Avatar */}
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-          member.isDeceased ? "text-white" : "text-white"
-        }`} style={{
-          background: member.isDeceased
-            ? "linear-gradient(135deg, var(--gold), #d97706)"
-            : `linear-gradient(135deg, var(--primary), ${depth === 0 ? "var(--gold)" : "var(--info)"})`,
-        }}>
-          {member.isDeceased ? <Heart size={20} /> : member.name.substring(0, 2)}
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold flex-shrink-0" 
+          style={{
+            background: member.is_deceased
+              ? "linear-gradient(135deg, var(--gold), #d97706)"
+              : `linear-gradient(135deg, var(--primary), ${depth === 0 ? "var(--gold)" : "var(--info)"})`,
+            color: "white"
+          }}>
+          {member.is_deceased ? <Heart size={20} /> : member.name.substring(0, 2)}
         </div>
 
-        {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className={`font-semibold text-sm ${member.isDeceased ? "gradient-text" : ""}`}>{member.name}</h3>
-            {member.isDeceased && <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(245, 158, 11, 0.15)", color: "var(--gold)" }}>মরহুম</span>}
+            <h3 className={`font-semibold text-sm ${member.is_deceased ? "gradient-text" : ""}`}>{member.name}</h3>
+            {member.is_deceased && <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: "rgba(245, 158, 11, 0.15)", color: "var(--gold)" }}>মরহুম</span>}
             <span className="badge badge-info text-[9px]">{member.relation}</span>
           </div>
           <div className="flex items-center gap-3 mt-1 text-[10px]" style={{ color: "var(--text-muted)" }}>
-            {member.birth && (
-              <span className="flex items-center gap-1"><Calendar size={10} /> {member.birth}{member.death ? ` – ${member.death}` : ""}</span>
+            {member.birth_year && (
+              <span className="flex items-center gap-1"><Calendar size={10} /> {member.birth_year}{member.death_year ? ` – ${member.death_year}` : ""}</span>
             )}
             {member.location && (
               <span className="flex items-center gap-1"><MapPin size={10} /> {member.location}</span>
             )}
           </div>
-          {member.story && (
-            <p className="text-[10px] mt-1 opacity-60 line-clamp-2">{member.story}</p>
-          )}
         </div>
 
-        {/* Expand icon */}
         {hasChildren && (
           <div className="flex items-center gap-2">
             <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: "var(--glass)", border: "1px solid var(--glass-border)", color: "var(--text-muted)" }}>
@@ -103,7 +71,6 @@ function TreeNode({ member, depth = 0 }: { member: FamilyMember; depth?: number 
         )}
       </div>
 
-      {/* Children */}
       {expanded && hasChildren && (
         <div className="relative">
           <div className="absolute left-6 top-0 bottom-0 w-px" style={{ background: "var(--glass-border)" }} />
@@ -117,6 +84,35 @@ function TreeNode({ member, depth = 0 }: { member: FamilyMember; depth?: number 
 }
 
 export default function FamilyTreePage() {
+  const [root, setRoot] = useState<FamilyMember | null>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchTree() {
+      setLoading(true);
+      const { data, error } = await supabase.from('members').select('*');
+      
+      if (!error && data) {
+        // Build hierarchy
+        const memberMap: { [key: number]: FamilyMember } = {};
+        data.forEach(m => memberMap[m.id] = { ...m, children: [] });
+        
+        let rootNode: FamilyMember | null = null;
+        data.forEach(m => {
+          if (m.parent_id && memberMap[m.parent_id]) {
+            memberMap[m.parent_id].children!.push(memberMap[m.id]);
+          } else if (m.generation === '১ম প্রজন্ম' || !m.parent_id) {
+            if (!rootNode) rootNode = memberMap[m.id];
+          }
+        });
+        setRoot(rootNode);
+      }
+      setLoading(false);
+    }
+    fetchTree();
+  }, []);
+
   return (
     <div className="flex w-full min-h-screen">
       <Sidebar />
@@ -129,30 +125,25 @@ export default function FamilyTreePage() {
             </div>
             <div>
               <h1 className="text-xl font-bold gradient-text">পারিবারিক বংশগাছ</h1>
-              <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>ইন্টারেক্টিভ ফ্যামিলি ট্রি — ক্লিক করে প্রসারিত/সংকুচিত করুন</p>
+              <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>ইন্টারেক্টিভ ফ্যামিলি ট্রি — ডাটাবেস থেকে লোড করা</p>
             </div>
           </div>
         </header>
 
         <div className="p-6 space-y-6">
-          {/* Legend */}
-          <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-2 text-[10px]">
-              <div className="w-3 h-3 rounded" style={{ background: "linear-gradient(135deg, var(--gold), #d97706)" }} />
-              <span style={{ color: "var(--text-muted)" }}>মরহুম</span>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 size={40} className="animate-spin text-primary opacity-20" />
+              <p className="mt-4 text-xs text-muted-foreground">বংশগাছ তৈরি হচ্ছে...</p>
             </div>
-            <div className="flex items-center gap-2 text-[10px]">
-              <div className="w-3 h-3 rounded" style={{ background: "linear-gradient(135deg, var(--primary), var(--gold))" }} />
-              <span style={{ color: "var(--text-muted)" }}>প্রতিষ্ঠাতা প্রজন্ম</span>
+          ) : root ? (
+            <TreeNode member={root} />
+          ) : (
+            <div className="p-20 text-center glass-card">
+              <GitBranch size={48} className="mx-auto mb-4 opacity-10" />
+              <p className="text-sm text-muted-foreground">কোনো বংশগাছ খুঁজে পাওয়া যায়নি। মেম্বার অ্যাড করার সময় "Parent ID" সেট করুন।</p>
             </div>
-            <div className="flex items-center gap-2 text-[10px]">
-              <div className="w-3 h-3 rounded" style={{ background: "linear-gradient(135deg, var(--primary), var(--info))" }} />
-              <span style={{ color: "var(--text-muted)" }}>বর্তমান সদস্য</span>
-            </div>
-          </div>
-
-          {/* Tree */}
-          <TreeNode member={familyTree} />
+          )}
         </div>
       </main>
     </div>
