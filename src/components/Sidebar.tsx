@@ -18,6 +18,7 @@ import {
   X,
   Heart,
   ChevronDown,
+  TrendingUp,
 } from "lucide-react";
 
 const navItems = [
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/gallery", icon: ImageIcon, label: "গ্যালারি ও শ্রদ্ধাঞ্জলি", labelEn: "Gallery" },
   { href: "/events", icon: Calendar, label: "ইভেন্ট ও ক্যালেন্ডার", labelEn: "Events" },
   { href: "/voting", icon: Vote, label: "ভোটিং", labelEn: "Voting" },
+  { href: "/tracker", icon: TrendingUp, label: "সফলতা-ব্যর্থতা", labelEn: "Performance" },
 ];
 
 export default function Sidebar() {
