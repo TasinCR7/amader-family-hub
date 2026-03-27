@@ -1,7 +1,7 @@
 "use client";
 
+import { useState } from "react";
 import Sidebar from "@/components/Sidebar";
-import StatCard from "@/components/StatCard";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import MiniChart from "@/components/MiniChart";
 import {
@@ -10,6 +10,7 @@ import {
   ClipboardList,
   MapPin,
   TrendingUp,
+  TrendingDown,
   Bell,
   Search,
   CalendarDays,
@@ -17,10 +18,21 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  Sparkles,
+  Brain,
+  Target,
+  Award,
+  BarChart3,
+  Zap,
+  Heart,
+  BookOpen,
 } from "lucide-react";
 
+/* ───── mock data ───── */
 const expenseData = [12000, 18000, 15000, 22000, 19000, 25000, 21000, 28000, 24000, 31000, 27000, 35000];
-const memberData = [8, 10, 12, 14, 16, 18, 22, 24, 25, 28, 30, 32];
+const memberData  = [8, 10, 12, 14, 16, 18, 22, 24, 25, 28, 30, 32];
+const successData = [65, 72, 68, 80, 78, 85, 82, 90, 88, 92, 91, 95];
+const landData    = [2, 3, 4, 5, 5, 6, 7, 8, 9, 10, 12, 15];
 
 const recentActivities = [
   { id: 1, action: "নতুন সদস্য যোগ হয়েছে", user: "আব্দুল করিম", time: "২ ঘণ্টা আগে", type: "success" as const },
@@ -36,7 +48,24 @@ const upcomingTasks = [
   { id: 3, title: "মাসিক হিসাব নিকাশ", deadline: "৩১ মার্চ ২০২৬", status: "চলমান", progress: 80 },
 ];
 
+const aiInsights = [
+  { icon: TrendingUp, text: "এই মাসে সাফল্যের হার ৯৫% — পরিবারের সর্বোচ্চ!", color: "var(--success)" },
+  { icon: Wallet, text: "এই মাসে খরচ বেড়েছে ১২% — কারণ জমির কাজ চলছে।", color: "var(--gold)" },
+  { icon: Target, text: "৩টি কাজ এই সপ্তাহে শেষ হবে — দারুণ অগ্রগতি!", color: "var(--info)" },
+  { icon: Users, text: "৩ জন নতুন সদস্য গত মাসে যুক্ত হয়েছেন।", color: "var(--primary)" },
+];
+
+const topMembers = [
+  { name: "আব্দুল করিম", tasks: 12, score: 95 },
+  { name: "রহিমা বেগম", tasks: 10, score: 92 },
+  { name: "মোহাম্মদ আলী", tasks: 8, score: 88 },
+  { name: "ফারুক আহমেদ", tasks: 7, score: 85 },
+  { name: "জামাল উদ্দিন", tasks: 6, score: 78 },
+];
+
 export default function Home() {
+  const [insightIndex, setInsightIndex] = useState(0);
+
   return (
     <div className="flex w-full min-h-screen">
       <Sidebar />
@@ -93,92 +122,136 @@ export default function Home() {
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Welcome Banner */}
+
+          {/* ═══ Tribute & Welcome Banner ═══ */}
           <div
             className="glass-card p-6 md:p-8 relative overflow-hidden"
             style={{
-              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(245, 158, 11, 0.05))",
+              background: "linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(245, 158, 11, 0.04), rgba(59, 130, 246, 0.04))",
             }}
           >
-            <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10"
-              style={{ background: "var(--primary)", filter: "blur(80px)" }}
-            />
-            <div className="relative z-10">
-              <p className="text-sm mb-1" style={{ color: "var(--text-muted)" }}>
-                আসসালামু আলাইকুম 🤲
-              </p>
-              <h2 className="text-2xl md:text-3xl font-bold mb-2">
-                <span className="gradient-text">আমাদের পরিবার পোর্টালে</span> স্বাগতম
-              </h2>
-              <p className="text-sm max-w-lg" style={{ color: "var(--text-muted)" }}>
-                মরহুম আব্দুল গফুর পরিবারের সকল তথ্য, কাজ, খরচ এবং জমির রেকর্ড এক জায়গায়।
-                আজকের তারিখ: <span className="font-semibold" style={{ color: "var(--gold)" }}>
-                  {new Date().toLocaleDateString("bn-BD", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </span>
-              </p>
+            <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10" style={{ background: "var(--primary)", filter: "blur(80px)" }} />
+            <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-10" style={{ background: "var(--gold)", filter: "blur(60px)" }} />
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
+              {/* Tribute Photo */}
+              <div className="flex-shrink-0">
+                <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl flex items-center justify-center pulse-glow"
+                  style={{ background: "linear-gradient(135deg, var(--primary), var(--gold))", boxShadow: "0 0 40px rgba(16, 185, 129, 0.2)" }}>
+                  <Heart size={40} className="text-white" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <p className="text-xs mb-1.5 flex items-center gap-1.5" style={{ color: "var(--text-muted)" }}>
+                  <BookOpen size={12} /> ইন্না লিল্লাহি ওয়া ইন্না ইলাইহি রাজিউন
+                </p>
+                <h2 className="text-2xl md:text-3xl font-bold mb-1">
+                  <span className="gradient-text">মরহুম আব্দুল গফুর</span> পরিবার পোর্টাল
+                </h2>
+                <p className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>
+                  আল্লাহ তাঁকে জান্নাতুল ফিরদাউস দান করুন। তাঁর রেখে যাওয়া উত্তরাধিকার ও পরিবারকে এগিয়ে নিতে আমরা প্রতিশ্রুতিবদ্ধ।
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-xs px-3 py-1.5 rounded-full" style={{ background: "rgba(16, 185, 129, 0.1)", color: "var(--primary-light)", border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+                    🤲 আসসালামু আলাইকুম
+                  </span>
+                  <span className="text-xs" style={{ color: "var(--gold)" }}>
+                    {new Date().toLocaleDateString("bn-BD", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Stats grid */}
+          {/* ═══ KPI Stats ═══ */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              icon={<Users size={20} />}
-              label="মোট সদস্য"
-              value={<AnimatedCounter end={32} />}
-              change="১২%"
-              changeType="up"
-              color="var(--primary)"
-              delay={0}
-            />
-            <StatCard
-              icon={<Wallet size={20} />}
-              label="মোট খরচ"
-              value={<AnimatedCounter end={285000} prefix="৳" />}
-              change="৮%"
-              changeType="up"
-              color="var(--gold)"
-              delay={100}
-            />
-            <StatCard
-              icon={<ClipboardList size={20} />}
-              label="চলমান কাজ"
-              value={<AnimatedCounter end={7} />}
-              change="৩ নতুন"
-              changeType="neutral"
-              color="var(--info)"
-              delay={200}
-            />
-            <StatCard
-              icon={<MapPin size={20} />}
-              label="জমি রেকর্ড"
-              value={<AnimatedCounter end={15} />}
-              change="১০০%"
-              changeType="up"
-              color="#a855f7"
-              delay={300}
-            />
+            <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "0ms" }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 rounded-lg" style={{ background: "rgba(16, 185, 129, 0.1)" }}>
+                  <Users size={20} style={{ color: "var(--primary)" }} />
+                </div>
+                <span className="badge badge-success text-[10px]">
+                  <TrendingUp size={10} /> ১২%
+                </span>
+              </div>
+              <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>মোট সদস্য</p>
+              <p className="text-3xl font-extrabold"><AnimatedCounter end={32} /></p>
+            </div>
+            <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "100ms" }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 rounded-lg" style={{ background: "rgba(245, 158, 11, 0.1)" }}>
+                  <Wallet size={20} style={{ color: "var(--gold)" }} />
+                </div>
+                <span className="badge badge-warning text-[10px]">
+                  <TrendingUp size={10} /> ৮%
+                </span>
+              </div>
+              <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>মোট খরচ</p>
+              <p className="text-3xl font-extrabold"><AnimatedCounter end={285000} prefix="৳" /></p>
+            </div>
+            <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "200ms" }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 rounded-lg" style={{ background: "rgba(59, 130, 246, 0.1)" }}>
+                  <ClipboardList size={20} style={{ color: "var(--info)" }} />
+                </div>
+                <span className="badge badge-info text-[10px]">৩ নতুন</span>
+              </div>
+              <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>চলমান কাজ</p>
+              <p className="text-3xl font-extrabold"><AnimatedCounter end={7} /></p>
+            </div>
+            <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "300ms" }}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="p-2 rounded-lg" style={{ background: "rgba(168, 85, 247, 0.1)" }}>
+                  <MapPin size={20} style={{ color: "#a855f7" }} />
+                </div>
+                <span className="badge badge-success text-[10px]">
+                  <TrendingUp size={10} /> ১০০%
+                </span>
+              </div>
+              <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>জমি রেকর্ড</p>
+              <p className="text-3xl font-extrabold"><AnimatedCounter end={15} /></p>
+            </div>
           </div>
 
-          {/* Charts & Activities */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Expense Chart */}
-            <div className="glass-card p-5 lg:col-span-2 fade-in-up" style={{ animationDelay: "400ms" }}>
+          {/* ═══ AI Quick Insights ═══ */}
+          <div className="glass-card p-5 fade-in-up relative overflow-hidden" style={{ animationDelay: "350ms" }}>
+            <div className="absolute -top-16 -right-16 w-32 h-32 bg-primary/10 blur-[60px] rounded-full pointer-events-none" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-xl" style={{ background: "rgba(16, 185, 129, 0.1)" }}>
+                <Brain size={18} style={{ color: "var(--primary)" }} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm flex items-center gap-1.5">
+                  AI দ্রুত বিশ্লেষণ <Sparkles size={14} className="text-gold animate-pulse" />
+                </h3>
+                <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>পরিবার এআই ইঞ্জিন দ্বারা চালিত</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {aiInsights.map((insight, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-xl transition-all hover:scale-[1.02]"
+                  style={{ background: `${insight.color}08`, border: `1px solid ${insight.color}15` }}>
+                  <insight.icon size={16} style={{ color: insight.color, marginTop: 2, flexShrink: 0 }} />
+                  <p className="text-xs leading-relaxed">{insight.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ═══ 4 Interactive Charts ═══ */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Chart 1: সাফল্যের হার */}
+            <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "400ms" }}>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="font-semibold text-base">মাসিক খরচের তথ্য</h3>
-                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>গত ১২ মাসের খরচ</p>
+                  <h3 className="font-semibold text-sm">সাফল্যের হার</h3>
+                  <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>গত ১২ মাসের সাফল্য</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <TrendingUp size={16} style={{ color: "var(--success)" }} />
-                  <span className="text-xs font-semibold" style={{ color: "var(--success)" }}>+১৫%</span>
+                  <Award size={16} style={{ color: "var(--gold)" }} />
+                  <span className="text-xs font-semibold" style={{ color: "var(--success)" }}>৯৫%</span>
                 </div>
               </div>
-              <MiniChart data={expenseData} color="#10b981" height={180} />
+              <MiniChart data={successData} color="#10b981" height={160} />
               <div className="flex justify-between mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
                 {["এপ্রি", "মে", "জুন", "জুলা", "আগ", "সেপ্ট", "অক্টো", "নভে", "ডিসে", "জানু", "ফেব্রু", "মার্চ"].map((m) => (
                   <span key={m}>{m}</span>
@@ -186,10 +259,89 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Recent Activities */}
+            {/* Chart 2: খরচের প্রবণতা */}
             <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "500ms" }}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-base">সাম্প্রতিক কার্যক্রম</h3>
+                <div>
+                  <h3 className="font-semibold text-sm">খরচের প্রবণতা</h3>
+                  <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>মাসিক খরচ (টাকায়)</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingUp size={16} style={{ color: "var(--gold)" }} />
+                  <span className="text-xs font-semibold" style={{ color: "var(--gold)" }}>+১৫%</span>
+                </div>
+              </div>
+              <MiniChart data={expenseData} color="#f59e0b" height={160} />
+              <div className="flex justify-between mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                {["এপ্রি", "মে", "জুন", "জুলা", "আগ", "সেপ্ট", "অক্টো", "নভে", "ডিসে", "জানু", "ফেব্রু", "মার্চ"].map((m) => (
+                  <span key={m}>{m}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Chart 3: জমি অগ্রগতি */}
+            <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "600ms" }}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-sm">জমি অগ্রগতি</h3>
+                  <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>জমি রেকর্ড সংখ্যা</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin size={16} style={{ color: "#a855f7" }} />
+                  <span className="text-xs font-semibold" style={{ color: "#a855f7" }}>+৩</span>
+                </div>
+              </div>
+              <MiniChart data={landData} color="#a855f7" height={160} />
+              <div className="flex justify-between mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
+                {["এপ্রি", "মে", "জুন", "জুলা", "আগ", "সেপ্ট", "অক্টো", "নভে", "ডিসে", "জানু", "ফেব্রু", "মার্চ"].map((m) => (
+                  <span key={m}>{m}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Chart 4: Top Members Ranking */}
+            <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "700ms" }}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold text-sm">সদস্য র‍্যাংকিং</h3>
+                  <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>কাজের সাফল্যের ভিত্তিতে</p>
+                </div>
+                <BarChart3 size={16} style={{ color: "var(--info)" }} />
+              </div>
+              <div className="space-y-3">
+                {topMembers.map((member, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <span className="text-xs font-bold w-5" style={{ color: i < 3 ? "var(--gold)" : "var(--text-muted)" }}>
+                      #{i + 1}
+                    </span>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                      style={{ background: i === 0 ? "linear-gradient(135deg, var(--gold), var(--primary))" : "var(--glass)", border: i !== 0 ? "1px solid var(--glass-border)" : "none", color: i !== 0 ? "var(--foreground)" : "white" }}>
+                      {member.name.substring(0, 2)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{member.name}</p>
+                      <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>{member.tasks} কাজ সম্পন্ন</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+                          <div className="h-full rounded-full" style={{ width: `${member.score}%`, background: "linear-gradient(90deg, var(--primary), var(--gold))" }} />
+                        </div>
+                        <span className="text-[10px] font-semibold" style={{ color: "var(--primary-light)" }}>{member.score}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ═══ Activities & Tasks ═══ */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Recent Activities */}
+            <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "800ms" }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-sm">সাম্প্রতিক কার্যক্রম</h3>
                 <Clock size={16} style={{ color: "var(--text-muted)" }} />
               </div>
               <div className="space-y-3">
@@ -224,25 +376,11 @@ export default function Home() {
                 ))}
               </div>
             </div>
-          </div>
-
-          {/* Member chart + Tasks */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Member Growth */}
-            <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "600ms" }}>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold text-base">সদস্য বৃদ্ধি</h3>
-                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>গত ১২ মাস</p>
-                </div>
-              </div>
-              <MiniChart data={memberData} color="#f59e0b" height={160} />
-            </div>
 
             {/* Upcoming Tasks */}
-            <div className="glass-card p-5 lg:col-span-2 fade-in-up" style={{ animationDelay: "700ms" }}>
+            <div className="glass-card p-5 lg:col-span-2 fade-in-up" style={{ animationDelay: "900ms" }}>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-base">আসন্ন কাজসমূহ</h3>
+                <h3 className="font-semibold text-sm">আসন্ন কাজসমূহ</h3>
                 <button className="btn-primary text-xs py-1.5 px-3">সব দেখুন</button>
               </div>
               <div className="space-y-4">
@@ -272,6 +410,21 @@ export default function Home() {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* ═══ Member Growth Chart ═══ */}
+          <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "1000ms" }}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-semibold text-sm">সদস্য বৃদ্ধি</h3>
+                <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>গত ১২ মাসে পরিবারের সদস্য সংখ্যা</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users size={16} style={{ color: "var(--primary)" }} />
+                <span className="text-xs font-semibold" style={{ color: "var(--primary-light)" }}>+৪</span>
+              </div>
+            </div>
+            <MiniChart data={memberData} color="#10b981" height={120} />
           </div>
 
           {/* Footer */}

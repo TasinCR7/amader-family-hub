@@ -25,7 +25,7 @@ export default function AIPredictor() {
     calculate();
   }, [effort, resources, risk]);
 
-  const getStatus = (p) => {
+  const getStatus = (p: number) => {
     if (p > 80) return { label: "খুব আশাব্যঞ্জক", color: "var(--success)" };
     if (p > 60) return { label: "ভালো সম্ভাবনা", color: "var(--primary)" };
     if (p > 40) return { label: "মাঝারি ঝুঁকি", color: "var(--gold)" };

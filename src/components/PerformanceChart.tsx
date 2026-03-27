@@ -41,7 +41,7 @@ export default function PerformanceChart() {
       ctx.stroke();
     }
 
-    const drawLine = (data, color, label) => {
+    const drawLine = (data: number[], color: string, _label: string) => {
       // Area gradient
       const gradient = ctx.createLinearGradient(0, padding, 0, padding + chartH);
       gradient.addColorStop(0, color + "30");

@@ -22,7 +22,15 @@ const familyStats = [
   { label: "প্রবৃদ্ধির হার", value: "+১৫.২%", icon: Zap, color: "var(--primary)" },
 ];
 
-const members = [
+interface Member {
+  id: number;
+  name: string;
+  role: string;
+  score: number;
+  trend: string;
+}
+
+const members: Member[] = [
   { id: 1, name: "আব্দুল করিম", role: "পারিবারিক প্রধান", score: 92, trend: "up" },
   { id: 2, name: "ফারুক আহমেদ", role: "সদস্য", score: 78, trend: "down" },
   { id: 3, name: "মোহাম্মদ আলী", role: "সদস্য", score: 85, trend: "up" },
@@ -30,7 +38,7 @@ const members = [
 ];
 
 export default function TrackerPage() {
-  const [selectedMember, setSelectedMember] = useState(null);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
 
   return (
     <div className="flex w-full min-h-screen">
