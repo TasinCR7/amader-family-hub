@@ -37,13 +37,14 @@ export default function AssistantPage() {
 
       setStats({
         memberCount: members?.length || 0,
-        totalExpenses: expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0,
-        ongoingTasks: tasks?.filter(t => t.status === 'চলমান').length || 0,
+        totalExpenses: expenses?.reduce((sum: number, e: any) => sum + (e.amount || 0), 0) || 0,
+        ongoingTasks: tasks?.filter((t: any) => t.status === 'চলমান').length || 0,
         nextEvent: events?.[0] || null
       });
     }
     fetchStats();
-  }, []);
+  }, [supabase]);
+
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -57,16 +58,23 @@ export default function AssistantPage() {
       let response = "দুঃখিত, আমি এই প্রশ্নের সঠিক উত্তর দিতে পারছি না। তবে পরিবারের তথ্য সম্পর্কে জিজ্ঞাসা করলে আমি সাহায্য করতে পারব! 🤔";
       
       if (input.includes("খরচ")) {
-        response = `এই মুহূর্তে পরিবারের মোট রেকর্ডকৃত খরচ ৳${stats.totalExpenses.toLocaleString()}। 📊`;
+        response = stats 
+          ? `এই মুহূর্তে পরিবারের মোট রেকর্ডকৃত খরচ ৳${stats.totalExpenses.toLocaleString()}। 📊`
+          : "দুঃখিত, খরচের তথ্য এই মুহূর্তে পাওয়া যাচ্ছে না।";
       } else if (input.includes("কাজ")) {
-        response = `বর্তমানে ${stats.ongoingTasks}টি কাজ চলমান আছে। ড্যাশবোর্ড থেকে বিস্তারিত দেখে নিন।`;
+        response = stats 
+          ? `বর্তমানে ${stats.ongoingTasks}টি কাজ চলমান আছে। ড্যাশবোর্ড থেকে বিস্তারিত দেখে নিন।`
+          : "বর্তমানে কতগুলো কাজ চলমান আছে তা লোড করা যাচ্ছে না।";
       } else if (input.includes("সভা") || input.includes("ইভেন্ট")) {
-        response = stats.nextEvent 
+        response = (stats && stats.nextEvent)
           ? `পরবর্তী ইভেন্ট: "${stats.nextEvent.title}" যা ${stats.nextEvent.date} তারিখে অনুষ্ঠিত হবে। 📅` 
           : "বর্তমানে কোনো নতুন ইভেন্ট শিডিউল করা নেই।";
       } else if (input.includes("সদস্য")) {
-        response = `বর্তমানে পরিবার পোর্টালে মোট ${stats.memberCount} জন সদস্য নিবন্ধিত আছেন। 👥`;
+        response = stats 
+          ? `বর্তমানে পরিবার পোর্টালে মোট ${stats.memberCount} জন সদস্য নিবন্ধিত আছেন। 👥`
+          : "সদস্য সংখ্যা লোড করা যাচ্ছে না।";
       }
+
 
       setMessages((prev) => [...prev, { id: prev.length + 1, text: response, sender: "ai", time: "এখন" }]);
       setLoading(false);
