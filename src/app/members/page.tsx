@@ -210,11 +210,15 @@ export default function MembersPage() {
               <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>সক্রিয়</p>
             </div>
             <div className="glass-card p-4 text-center fade-in-up" style={{ animationDelay: "200ms" }}>
-              <p className="text-2xl font-extrabold" style={{ color: "var(--gold)" }}>৩</p>
+              <p className="text-2xl font-extrabold" style={{ color: "var(--gold)" }}>
+                {Array.from(new Set(members.map(m => m.generation).filter(Boolean))).length}
+              </p>
               <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>প্রজন্ম</p>
             </div>
             <div className="glass-card p-4 text-center fade-in-up" style={{ animationDelay: "300ms" }}>
-              <p className="text-2xl font-extrabold" style={{ color: "var(--info)" }}>৫</p>
+              <p className="text-2xl font-extrabold" style={{ color: "var(--info)" }}>
+                {Array.from(new Set(members.map(m => m.location).filter(Boolean))).length}
+              </p>
               <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>এলাকা</p>
             </div>
           </div>
