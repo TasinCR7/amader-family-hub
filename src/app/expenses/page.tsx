@@ -24,7 +24,7 @@ interface Expense {
 }
 
 const categories = ["সব", "জমি", "অনুদান", "খাবার", "বিল", "শিক্ষা", "চিকিৎসা", "কৃষি", "পরিবহন"];
-const monthlyData = [32000, 28000, 45000, 38000, 52000, 41000, 48000, 35000, 55000, 42000, 38000, 48700];
+const emptyMonthlyData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 const reportTypes = ["মাসিক", "বার্ষিক", "জমি-ভিত্তিক", "সদস্য-ভিত্তিক", "কাস্টম"];
 
 export default function ExpensesPage() {
@@ -181,23 +181,37 @@ export default function ExpensesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="glass-card p-5 fade-in-up">
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>এই মাসের মোট খরচ</p>
-              <div className="stat-number gradient-text mt-2">৳<AnimatedCounter end={48700} /></div>
+              <div className="stat-number gradient-text mt-2">
+                ৳<AnimatedCounter end={expenses.filter(e => {
+                  const d = new Date(e.date);
+                  const now = new Date();
+                  return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                }).reduce((sum, e) => sum + (Number(e.amount) || 0), 0)} />
+              </div>
               <div className="flex items-center gap-1 mt-2 text-xs" style={{ color: "var(--success)" }}>
-                <TrendingDown size={12} /> ৫% কম গত মাসের চেয়ে
+                <TrendingDown size={12} /> ০% গত মাসের চেয়ে
               </div>
             </div>
             <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "100ms" }}>
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>বার্ষিক মোট খরচ</p>
-              <div className="stat-number gradient-text mt-2">৳<AnimatedCounter end={285000} /></div>
+              <div className="stat-number gradient-text mt-2">
+                ৳<AnimatedCounter end={expenses.filter(e => {
+                  const d = new Date(e.date);
+                  const now = new Date();
+                  return d.getFullYear() === now.getFullYear();
+                }).reduce((sum, e) => sum + (Number(e.amount) || 0), 0)} />
+              </div>
               <div className="flex items-center gap-1 mt-2 text-xs" style={{ color: "var(--gold)" }}>
-                <TrendingUp size={12} /> গড় মাসিক ৳২৩,৭৫০
+                <TrendingUp size={12} /> আপডেট করা হয়েছে
               </div>
             </div>
             <div className="glass-card p-5 fade-in-up" style={{ animationDelay: "200ms" }}>
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>মোট লেনদেন</p>
-              <div className="stat-number gradient-text mt-2"><AnimatedCounter end={156} /></div>
+              <div className="stat-number gradient-text mt-2">
+                <AnimatedCounter end={expenses.length} />
+              </div>
               <div className="flex items-center gap-1 mt-2 text-xs" style={{ color: "var(--info)" }}>
-                <ArrowUpRight size={12} /> এই মাসে ১২টি
+                <ArrowUpRight size={12} /> মোট রেকর্ড
               </div>
             </div>
           </div>
@@ -208,10 +222,11 @@ export default function ExpensesPage() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-sm">মাসিক খরচের চার্ট</h3>
                 <select className="bg-glass border border-glass-border rounded-lg text-xs p-1.5 outline-none">
-                  <option>২০২৬</option><option>২০২৫</option>
+                  <option>{new Date().getFullYear()}</option>
+                  <option>{new Date().getFullYear() - 1}</option>
                 </select>
               </div>
-              <MiniChart data={monthlyData} color="#f59e0b" height={200} />
+              <MiniChart data={emptyMonthlyData} color="#f59e0b" height={200} />
               <div className="flex justify-between mt-3 text-[10px]" style={{ color: "var(--text-muted)" }}>
                 {["এপ্রি", "মে", "জুন", "জুলা", "আগ", "সেপ্ট", "অক্টো", "নভে", "ডিসে", "জানু", "ফেব্রু", "মার্চ"].map((m) => (
                   <span key={m}>{m}</span>
